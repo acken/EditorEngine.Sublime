@@ -6,11 +6,16 @@ import os.path
 
 class EditorEnginePluginHost(sublime_plugin.ApplicationCommand):
 	def __init__ (self):
-		self.__server = OIServer()
-		self.__server.serve_forever()
+		token = get_editor_engine_token(None)
+		if token == None:
+			self.__server = None
+		else:
+			self.__server = OIServer()
+			self.__server.serve_forever()
 
 	def __del__(self):
-		self.__server.shutdown()
+		if self.__server != None:
+			self.__server.shutdown()
 
 	def run(self):
 		print "Not in use"
@@ -181,7 +186,21 @@ class TCPThreadedServer(TCPServer, ThreadingMixIn):
 
 	def __init__(self, host, port, name=None):
 		self.allow_reuse_address = True
-		TCPServer.__init__(self, (host, port), self.RequstHandler)
+		TCPServer.__init__(self, (host, 0), self.RequstHandler)
+		ip, port = self.server_address
+		self.port = port
+		myPID = os.getpid()
+		path = os.path.join(tempfile.gettempdir(), "sublime_invite." + str(myPID))
+		print "looking for " + str(myPID)
+		i = 0
+		while os.path.isfile(path) == False:
+			i = i + 1
+			if i == 40:
+				return
+			time.sleep(0.05)
+		with open (path, 'w') as f:
+			f.write (str(port))
+		#TCPServer.__init__(self, (host, port), self.RequstHandler)
 		if name is None: name = "%s:%s" % (host, port)
 		self.name = name
 		self.poll_interval = 0.5
@@ -204,7 +223,7 @@ class TCPThreadedServer(TCPServer, ThreadingMixIn):
 
 class OIServer(TCPThreadedServer):
 	def __init__(self):
-		TCPThreadedServer.__init__(self, "localhost", 9998, "Server")
+		TCPThreadedServer.__init__(self, "localhost", 0, "Server")
 
 	def process(self, data):
 		reply = None
