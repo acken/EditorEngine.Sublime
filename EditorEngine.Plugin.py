@@ -216,6 +216,10 @@ class TCPThreadedServer(TCPServer, ThreadingMixIn):
 		self.trd.start()
 
 	def shutdown(self):
+		myPID = os.getpid()
+		path = os.path.join(tempfile.gettempdir(), "sublime_invite." + str(myPID))
+		if os.path.isfile(path) == True:
+			os.remove(path)
 		TCPServer.shutdown(self)
 		TCPServer.server_close(self)
 		self.trd.join()
